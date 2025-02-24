@@ -1,0 +1,9 @@
+[project]
+name = "vhooks"
+version = "0.3.0"
+description = "Github hooks"
+authors = [{ name = "Arnau Villoro", email = "arnau@villoro.com" }]
+maintainers = [{ name = "Arnau Villoro", email = "arnau@villoro.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
