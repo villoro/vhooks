@@ -26,7 +26,7 @@ jobs:
   check_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_version@0.4.0
+      - uses: villoro/vhooks/check_version@1.0.0
         with:
           branch: "main"  # Change this to compare against a different branch
 ```
@@ -68,11 +68,14 @@ on:
     paths:
       - pyproject.toml
 
+permissions:
+  contents: write
+
 jobs:
   tag_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/tag_version@0.4.0
+      - uses: villoro/vhooks/tag_version@1.0.0
 ```
 
 ### ✅ Expected Behavior
