@@ -1,6 +1,8 @@
 import subprocess
-import toml
+import sys
+
 import click
+import toml
 from loguru import logger
 from packaging import version
 
@@ -20,7 +22,7 @@ def fetch_pyproject_from_branch(branch):
         ).stdout
     except subprocess.CalledProcessError:
         logger.error(f"❌ Could not fetch pyproject.toml from {branch=}")
-        exit(1)
+        sys.exit(1)
 
 
 def get_version(branch=None):
@@ -39,33 +41,40 @@ def get_version(branch=None):
 
         return config["project"]["version"]
 
+    except (toml.TomlDecodeError, KeyError) as e:
+        logger.error(f"❌ Error parsing pyproject.toml: {e}")
+        sys.exit(1)
     except Exception as e:
-        logger.error(f"❌ Error reading version: {e}")
-        exit(1)
+        logger.error(f"❌ Unexpected error reading version: {e}")
+        sys.exit(1)
 
 
 def check_versions_are_consecutive(version_current, version_main):
-    """Ensures version increments follow correct sequence (e.g., 1.0.0 → 1.0.1, not 1.0.0 → 1.2.0)."""
-    diff_major = version_current.major - version_main.major
-    diff_minor = version_current.minor - version_main.minor
-    diff_micro = version_current.micro - version_main.micro
+    """
+    Ensures version increments follow correct sequence:
+    - ✅ Allowed: 1.0.0 → 1.0.1, 1.0.0 → 1.1.0, 1.0.0 → 2.0.0
+    - ❌ Not Allowed: 1.0.0 → 1.2.0, 1.0.0 → 2.1.0
+    """
+    diff_major, diff_minor, diff_micro = (
+        version_current.major - version_main.major,
+        version_current.minor - version_main.minor,
+        version_current.micro - version_main.micro,
+    )
 
-    if (diff_major > 1) or (diff_minor > 1) or (diff_micro > 1):
+    if diff_major > 1 or diff_minor > 1 or diff_micro > 1:
         return False
 
-    if diff_major == 1:
-        if (
-            (diff_minor > 0)
-            or (diff_micro > 0)
-            or (version_current.minor != 0)
-            or (version_current.micro != 0)
-        ):
-            return False
-        return True
-    elif diff_minor == 1:
-        if (diff_micro > 0) or (version_current.micro != 0):
-            return False
-        return True
+    if diff_major == 1 and (
+        diff_minor > 0
+        or diff_micro > 0
+        or version_current.minor != 0
+        or version_current.micro != 0
+    ):
+        return False
+
+    if diff_minor == 1 and (diff_micro > 0 or version_current.micro != 0):
+        return False
+
     return True
 
 
@@ -73,7 +82,7 @@ def validate_versions(version_current, version_main):
     """Checks if the versions are consecutive."""
     if not check_versions_are_consecutive(version_current, version_main):
         logger.error("❌ Only one version increase at a time allowed")
-        exit(1)
+        sys.exit(1)
 
     logger.success("✅ Versions are consecutive")
 
@@ -96,7 +105,7 @@ def check_version(branch):
         logger.error(
             f"❌ Version has not been updated. Please increment the version before merging into '{branch}'."
         )
-        exit(1)
+        sys.exit(1)
 
     # Check if versions are consecutive
     validate_versions(current_version, branch_version)
