@@ -1,0 +1,41 @@
+name: Tag Version
+description: Automatically tags a commit with the version from pyproject.toml when merged to main.
+author: Arnau Villoro
+
+inputs:
+  branch:
+    description: Branch to check the version from
+    required: false
+    default: main
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: pip install toml loguru click
+      shell: bash
+
+    - name: Extract Version from pyproject.toml
+      run: python $GITHUB_ACTION_PATH/tag_version.py --branch=${{ inputs.branch }}
+      shell: bash
+
+    - name: Check if Tag Exists
+      uses: mukunku/tag-exists-action@v1.4.0
+      id: check_tag
+      with:
+        tag: ${{ env.VERSION }}
+
+    - name: Tag commit with current version
+      if: steps.check_tag.outputs.exists != 'true'
+      uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: `refs/tags/${{ env.VERSION }}`,
+            sha: context.sha
+          })

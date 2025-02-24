@@ -1,6 +1,6 @@
 # Check Version GitHub Action
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/vhooks/check_version)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/villoro/vhooks)
 
 This GitHub Action ensures that the version in `pyproject.toml` has been updated before merging a pull request.
 
