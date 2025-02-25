@@ -25,9 +25,9 @@ def fetch_pyproject_from_branch(branch):
         sys.exit(1)
 
 
-def get_version(branch=None):
+def get_version(path, branch=None):
     """
-    Retrieves the package version from pyproject.toml.
+    Retrieves the package version from a specified path in pyproject.toml.
     If branch is None, reads from the local file.
     Otherwise, fetches the file from the specified Git branch.
     """
@@ -39,13 +39,19 @@ def get_version(branch=None):
             logger.info("Fetching version from the current branch")
             config = toml.load(PYPROJECT_FILE)
 
-        return config["project"]["version"]
+        # Extract version from the specified TOML path
+        keys = path.split("/")
+        version_value = config
+        for key in keys:
+            version_value = version_value[key]
 
-    except (toml.TomlDecodeError, KeyError) as e:
-        logger.error(f"❌ Error parsing pyproject.toml: {e}")
+        return version_value
+
+    except KeyError:
+        logger.error(f"❌ Specified path '{path}' not found in pyproject.toml")
         sys.exit(1)
-    except Exception as e:
-        logger.error(f"❌ Unexpected error reading version: {e}")
+    except (toml.TomlDecodeError, Exception) as e:
+        logger.error(f"❌ Error parsing pyproject.toml: {e}")
         sys.exit(1)
 
 
@@ -89,10 +95,15 @@ def validate_versions(version_current, version_main):
 
 @click.command()
 @click.option("--branch", default="main", help="Branch to compare the version with")
-def check_version(branch):
+@click.option(
+    "--path",
+    default="project/version",
+    help="Path inside pyproject.toml to extract the version",
+)
+def check_version(branch, path):
     """Compares current version with the specified branch version."""
-    current_version_str = get_version()
-    branch_version_str = get_version(branch)
+    current_version_str = get_version(path)
+    branch_version_str = get_version(path, branch)
 
     logger.info(f"🔍 Current branch version: {current_version_str}")
     logger.info(f"🔍 {branch.title()} branch version: {branch_version_str}")

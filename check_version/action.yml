@@ -18,6 +18,11 @@ inputs:
     required: false
     default: main
 
+  path:
+    description: Path inside pyproject.toml to extract the version
+    required: false
+    default: project/version
+
 runs:
   using: composite
   steps:
@@ -33,5 +38,5 @@ runs:
       shell: bash
 
     - name: Run Version Check
-      run: python $GITHUB_ACTION_PATH/check_version.py --branch=${{ inputs.branch }}
+      run: python $GITHUB_ACTION_PATH/check_version.py --branch=${{ inputs.branch }} --path=${{ inputs.path }}
       shell: bash
