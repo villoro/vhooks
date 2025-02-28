@@ -1,6 +1,6 @@
 [project]
 name = "vhooks"
-version = "1.1.0"
+version = "1.2.0"
 description = "Github hooks"
 authors = [{ name = "Arnau Villoro", email = "arnau@villoro.com" }]
 maintainers = [{ name = "Arnau Villoro", email = "arnau@villoro.com" }]

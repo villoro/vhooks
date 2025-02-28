@@ -1,5 +1,5 @@
 name: Tag Version
-description: Automatically tags a commit with the version from pyproject.toml when merged to main.
+description: Automatically tags a commit with the version from a specified file when merged to main.
 author: Arnau Villoro
 
 inputs:
@@ -8,8 +8,13 @@ inputs:
     required: false
     default: main
 
+  file:
+    description: File to extract the version from (supports .toml, .json, .yml)
+    required: false
+    default: pyproject.toml
+
   path:
-    description: Path inside pyproject.toml to extract the version
+    description: Path inside the file to extract the version
     required: false
     default: project/version
 
@@ -20,11 +25,11 @@ runs:
       uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: pip install toml loguru click
+      run: pip install toml loguru click pyyaml
       shell: bash
 
-    - name: Extract Version from pyproject.toml
-      run: python $GITHUB_ACTION_PATH/tag_version.py --branch=${{ inputs.branch }} --path=${{ inputs.path }}
+    - name: Extract Version from the specified file
+      run: python $GITHUB_ACTION_PATH/tag_version.py --file=${{ inputs.file }} --path=${{ inputs.path }}
       shell: bash
 
     - name: Check if Tag Exists
