@@ -1,58 +1,75 @@
+import json
 import subprocess
 import sys
 
 import click
 import toml
+import yaml
 from loguru import logger
 from packaging import version
 
-PYPROJECT_FILE = "pyproject.toml"
+DEFAULT_FILE = "pyproject.toml"
 
 
-def fetch_pyproject_from_branch(branch):
-    """Fetches pyproject.toml content from a specific Git branch."""
-    logger.info(f"Fetching pyproject.toml from {branch=}")
+def fetch_file_from_branch(branch, file_path):
+    """Fetches file content from a specific Git branch."""
+    logger.info(f"Fetching {file_path} from {branch=}")
 
     try:
         return subprocess.run(
-            ["git", "show", f"origin/{branch}:{PYPROJECT_FILE}"],
+            ["git", "show", f"origin/{branch}:{file_path}"],
             capture_output=True,
             text=True,
             check=True,
         ).stdout
     except subprocess.CalledProcessError:
-        logger.error(f"❌ Could not fetch pyproject.toml from {branch=}")
+        logger.error(f"❌ Could not fetch {file_path} from {branch=}")
         sys.exit(1)
 
 
-def get_version(path, branch=None):
-    """
-    Retrieves the package version from a specified path in pyproject.toml.
-    If branch is None, reads from the local file.
-    Otherwise, fetches the file from the specified Git branch.
-    """
+def parse_file_content(file_path, content):
+    """Parses the file content based on the file extension."""
+    if file_path.endswith(".toml"):
+        return toml.loads(content)
+    elif file_path.endswith(".json"):
+        return json.loads(content)
+    elif file_path.endswith(".yml") or file_path.endswith(".yaml"):
+        return yaml.safe_load(content)
+    else:
+        logger.error(f"❌ Unsupported file format: {file_path}")
+        sys.exit(1)
+
+
+def load_file(file_path, branch=None):
+    """Loads the file content from the local file or a specified Git branch."""
     try:
         if branch:
-            pyproject_content = fetch_pyproject_from_branch(branch)
-            config = toml.loads(pyproject_content)
+            file_content = fetch_file_from_branch(branch, file_path)
+            return parse_file_content(file_path, file_content)
         else:
-            logger.info("Fetching version from the current branch")
-            config = toml.load(PYPROJECT_FILE)
+            logger.info(f"Fetching data from local {file_path}")
+            with open(file_path, "r") as f:
+                return parse_file_content(file_path, f.read())
 
-        # Extract version from the specified TOML path
-        keys = path.split("/")
-        version_value = config
-        for key in keys:
-            version_value = version_value[key]
-
-        return version_value
-
-    except KeyError:
-        logger.error(f"❌ Specified path '{path}' not found in pyproject.toml")
+    except (FileNotFoundError, KeyError):
+        logger.error(f"❌ Could not find {file_path} or path is invalid")
         sys.exit(1)
-    except (toml.TomlDecodeError, Exception) as e:
-        logger.error(f"❌ Error parsing pyproject.toml: {e}")
+    except Exception as e:
+        logger.error(f"❌ Error parsing {file_path}: {e}")
         sys.exit(1)
+
+
+def get_version(file_path, version_path, branch=None):
+    """Retrieves the package version from the specified file."""
+    config = load_file(file_path, branch)
+
+    # Extract version from the nested structure
+    keys = version_path.split("/")
+    version_value = config
+    for key in keys:
+        version_value = version_value[key]
+
+    return version_value
 
 
 def check_versions_are_consecutive(version_current, version_main):
@@ -96,14 +113,19 @@ def validate_versions(version_current, version_main):
 @click.command()
 @click.option("--branch", default="main", help="Branch to compare the version with")
 @click.option(
+    "--file",
+    default=DEFAULT_FILE,
+    help="File to read the version from (supports .toml, .json, .yml)",
+)
+@click.option(
     "--path",
     default="project/version",
-    help="Path inside pyproject.toml to extract the version",
+    help="Path inside the file to extract the version",
 )
-def check_version(branch, path):
+def check_version(branch, file, path):
     """Compares current version with the specified branch version."""
-    current_version_str = get_version(path)
-    branch_version_str = get_version(path, branch)
+    current_version_str = get_version(file, path)
+    branch_version_str = get_version(file, path, branch)
 
     logger.info(f"🔍 Current branch version: {current_version_str}")
     logger.info(f"🔍 {branch.title()} branch version: {branch_version_str}")

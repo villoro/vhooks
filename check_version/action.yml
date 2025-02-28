@@ -18,8 +18,13 @@ inputs:
     required: false
     default: main
 
+  file:
+    description: File to check version in (e.g., pyproject.toml, version.json)
+    required: false
+    default: pyproject.toml
+
   path:
-    description: Path inside pyproject.toml to extract the version
+    description: Path inside the file to extract the version
     required: false
     default: project/version
 
@@ -34,9 +39,9 @@ runs:
       shell: bash
 
     - name: Install Dependencies
-      run: pip install toml loguru packaging click
+      run: pip install toml loguru packaging click pyyaml
       shell: bash
 
     - name: Run Version Check
-      run: python $GITHUB_ACTION_PATH/check_version.py --branch=${{ inputs.branch }} --path=${{ inputs.path }}
+      run: python $GITHUB_ACTION_PATH/check_version.py --branch=${{ inputs.branch }} --file=${{ inputs.file }} --path=${{ inputs.path }}
       shell: bash
