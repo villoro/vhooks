@@ -1,46 +1,68 @@
+import json
 import os
 import sys
 
 import click
 import toml
+import yaml
 from loguru import logger
 
-PYPROJECT_FILE = "pyproject.toml"
+DEFAULT_FILE = "pyproject.toml"
 
 
-def get_version_from_toml(path):
-    """Reads version from a specified path in pyproject.toml."""
+def load_file(file_path):
+    """Loads and parses the version file based on its format."""
     try:
-        config = toml.load(PYPROJECT_FILE)
+        with open(file_path, "r") as f:
+            content = f.read()
 
-        # Navigate the TOML structure using the specified path
-        keys = path.split("/")
-        version_value = config
-        for key in keys:
-            version_value = version_value[key]
+        if file_path.endswith(".toml"):
+            return toml.loads(content)
+        elif file_path.endswith(".json"):
+            return json.loads(content)
+        elif file_path.endswith(".yml") or file_path.endswith(".yaml"):
+            return yaml.safe_load(content)
+        else:
+            logger.error(f"❌ Unsupported file format: {file_path}")
+            sys.exit(1)
 
-        return version_value
-
-    except KeyError:
-        logger.error(f"❌ Specified path '{path}' not found in pyproject.toml")
+    except (FileNotFoundError, KeyError):
+        logger.error(f"❌ Could not find {file_path} or path is invalid")
         sys.exit(1)
-    except (toml.TomlDecodeError, Exception) as e:
-        logger.error(f"❌ Error parsing pyproject.toml: {e}")
+    except Exception as e:
+        logger.error(f"❌ Error parsing {file_path}: {e}")
         sys.exit(1)
+
+
+def get_version(file_path, version_path):
+    """Extracts version from the specified file."""
+    config = load_file(file_path)
+
+    # Navigate the structure using the specified path
+    keys = version_path.split("/")
+    version_value = config
+    for key in keys:
+        version_value = version_value[key]
+
+    return version_value
 
 
 @click.command()
-@click.option("--branch", default="main", help="Branch to compare the version with")
+@click.option(
+    "--file",
+    default=DEFAULT_FILE,
+    help="File to extract the version from (supports .toml, .json, .yml)",
+)
 @click.option(
     "--path",
     default="project/version",
-    help="Path inside pyproject.toml to extract the version",
+    help="Path inside the file to extract the version",
 )
-def tag_version(branch, path):
+def tag_version(file, path):
     """Extracts version and sets it as an environment variable for tagging."""
-    version = get_version_from_toml(path)
+    version = get_version(file, path)
 
-    logger.info(f"🔍 Extracted version from '{path}': {version}")
+    logger.info(f"🔍 Extracted version from '{file}:{path}': {version}")
 
     # Set the version as an environment variable for GitHub Actions
     with open(os.environ["GITHUB_ENV"], "a") as env_file:
