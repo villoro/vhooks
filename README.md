@@ -86,12 +86,14 @@ jobs:
 
 ### 🛠️ Inputs
 
-| Input     | Description                                                            | Required | Default           |
-| --------- | ---------------------------------------------------------------------- | -------- | ----------------- |
-| `branch`  | Branch to check version from.                                          | ❌ No     | `main`            |
-| `file`    | File to extract the version from (supports `.toml`, `.json`, `.yml`).  | ❌ No     | `pyproject.toml`  |
-| `path`    | Path inside the file to extract the version.                           | ❌ No     | `project/version` |
-| `filters` | YAML configuration for `dorny/paths-filter`. Must define a `code` key. | ❌ No     | `code: ['**']`    |
+| Input        | Description                                                            | Required | Default           |
+| ------------ | ---------------------------------------------------------------------- | -------- | ----------------- |
+| `branch`     | Branch to check version from.                                          | ❌ No     | `main`            |
+| `file`       | File to extract the version from (supports `.toml`, `.json`, `.yml`).  | ❌ No     | `pyproject.toml`  |
+| `path`       | Path inside the file to extract the version.                           | ❌ No     | `project/version` |
+| `filters`    | YAML configuration for `dorny/paths-filter`. Must define a `code` key. | ❌ No     | `code: ['**']`    |
+| `tag-prefix` | Optional prefix to prepend to the tag (e.g. `v` creates `v1.2.3`).     | ❌ No     | *(empty)*         |
+
 
 ### ✅ Expected Behavior
 
