@@ -1,5 +1,5 @@
 name: Check Package Version
-description: Checks if the package version has been updated compared to a specified branch.
+description: Checks if the package version has been updated compared to a specified branch, only when selected paths change.
 author: Arnau Villoro
 
 inputs:
@@ -9,7 +9,7 @@ inputs:
     default: ${{ github.repository }}
 
   ref:
-    description: Branch reference
+    description: Branch/commit ref to evaluate
     required: true
     default: ${{ github.ref }}
 
@@ -28,20 +28,46 @@ inputs:
     required: false
     default: project/version
 
+  filters:
+    description: |
+      YAML for dorny/paths-filter. Must define a 'code' key.
+      Example:
+        code:
+          - 'src/ecs_northius/**'
+    required: false
+    default: |
+      code:
+        - '**'
+
 runs:
   using: composite
   steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
+        fetch-depth: 0
 
-    - name: Fetch Target Branch
+    - name: Fetch target branch
+      shell: bash
       run: git fetch origin ${{ inputs.branch }} --depth=1
-      shell: bash
 
-    - name: Install Dependencies
+    - name: Detect path changes
+      id: changes
+      uses: dorny/paths-filter@v2
+      with:
+        # Compare specified ref against target branch
+        base: origin/${{ inputs.branch }}
+        ref: ${{ inputs.ref }}
+        filters: ${{ inputs.filters }}
+
+    - name: Install dependencies
+      if: steps.changes.outputs.code == 'true'
+      shell: bash
       run: pip install toml loguru packaging click pyyaml
-      shell: bash
 
-    - name: Run Version Check
-      run: python $GITHUB_ACTION_PATH/check_version.py --branch=${{ inputs.branch }} --file=${{ inputs.file }} --path=${{ inputs.path }}
+    - name: Run version check
+      if: steps.changes.outputs.code == 'true'
       shell: bash
+      run: python "$GITHUB_ACTION_PATH/check_version.py" --branch="${{ inputs.branch }}" --file="${{ inputs.file }}" --path="${{ inputs.path }}"
