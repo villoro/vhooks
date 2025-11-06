@@ -29,6 +29,13 @@ inputs:
       code:
         - '**'
 
+  inputs:
+    tag-prefix:
+      description: Optional tag prefix (e.g. 'v' to tag as v1.2.3)
+      required: false
+      default: ''
+
+
 runs:
   using: composite
   steps:
@@ -58,7 +65,7 @@ runs:
       id: check_tag
       uses: mukunku/tag-exists-action@v1.4.0
       with:
-        tag: ${{ env.VERSION }}
+        tag: ${{ inputs.tag-prefix }}${{ env.VERSION }}
 
     - name: Create tag
       if: steps.changes.outputs.code == 'true' && steps.check_tag.outputs.exists != 'true'
@@ -68,6 +75,6 @@ runs:
           github.rest.git.createRef({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            ref: `refs/tags/${{ env.VERSION }}`,
+            ref: `refs/tags/${{ inputs.tag-prefix }}${{ env.VERSION }}`,
             sha: context.sha
           })
