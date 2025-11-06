@@ -1,5 +1,5 @@
 name: Tag Version
-description: Automatically tags a commit with the version from a specified file when merged to main.
+description: Tag with the version from a file only when selected paths change.
 author: Arnau Villoro
 
 inputs:
@@ -18,29 +18,51 @@ inputs:
     required: false
     default: project/version
 
+  filters:
+    description: |
+      YAML for dorny/paths-filter. Must define a 'code' key.
+      Example:
+        code:
+          - 'src/**'
+    required: false
+    default: |
+      code:
+        - '**'
+
 runs:
   using: composite
   steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    - name: Install Dependencies
+    - name: Detect changes
+      id: changes
+      uses: dorny/paths-filter@v2
+      with:
+        filters: ${{ inputs.filters }}
+
+    - name: Install dependencies
+      if: steps.changes.outputs.code == 'true'
+      shell: bash
       run: pip install toml loguru click pyyaml
-      shell: bash
 
-    - name: Extract Version from the specified file
-      run: python $GITHUB_ACTION_PATH/tag_version.py --file=${{ inputs.file }} --path=${{ inputs.path }}
+    - name: Extract version
+      if: steps.changes.outputs.code == 'true'
       shell: bash
+      run: python "$GITHUB_ACTION_PATH/tag_version.py" --file="${{ inputs.file }}" --path="${{ inputs.path }}"
 
-    - name: Check if Tag Exists
-      uses: mukunku/tag-exists-action@v1.4.0
+    - name: Check if tag exists
+      if: steps.changes.outputs.code == 'true'
       id: check_tag
+      uses: mukunku/tag-exists-action@v1.4.0
       with:
         tag: ${{ env.VERSION }}
 
-    - name: Tag commit with current version
-      if: steps.check_tag.outputs.exists != 'true'
-      uses: actions/github-script@v5
+    - name: Create tag
+      if: steps.changes.outputs.code == 'true' && steps.check_tag.outputs.exists != 'true'
+      uses: actions/github-script@v7
       with:
         script: |
           github.rest.git.createRef({
