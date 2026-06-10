@@ -1,0 +1,56 @@
+name: Check Versions Match
+description: Checks that the version is identical across multiple files/paths, only when selected paths change.
+author: Arnau Villoro
+
+inputs:
+  targets:
+    description: |
+      YAML list of {file, path} entries whose versions must match.
+      'path' is slash-separated and supports selecting a list item by a
+      field value, e.g. 'package[name=dbt-northius]/version'.
+      Example:
+        targets: |
+          - file: dbt_project.yml
+            path: version
+          - file: pyproject.toml
+            path: project/version
+          - file: pyproject.toml
+            path: tool/bumpversion/current_version
+          - file: uv.lock
+            path: package[name=dbt-northius]/version
+    required: true
+
+  filters:
+    description: |
+      YAML for dorny/paths-filter. Must define a 'code' key.
+      Example:
+        code:
+          - 'pyproject.toml'
+    required: false
+    default: |
+      code:
+        - '**'
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect path changes
+      id: changes
+      uses: dorny/paths-filter@v2
+      with:
+        filters: ${{ inputs.filters }}
+
+    - name: Install dependencies
+      if: steps.changes.outputs.code == 'true'
+      shell: bash
+      run: pip install toml loguru click pyyaml
+
+    - name: Run versions match check
+      if: steps.changes.outputs.code == 'true'
+      shell: bash
+      run: python "$GITHUB_ACTION_PATH/check_versions_match.py" --targets="${{ inputs.targets }}"

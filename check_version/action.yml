@@ -1,5 +1,7 @@
 name: Check Package Version
-description: Checks if the package version has been updated compared to a specified branch, only when selected paths change.
+description: >
+  Checks if the package version has been updated compared to a specified branch,
+  only when selected paths change.
 author: Arnau Villoro
 
 inputs:
@@ -70,4 +72,8 @@ runs:
     - name: Run version check
       if: steps.changes.outputs.code == 'true'
       shell: bash
-      run: python "$GITHUB_ACTION_PATH/check_version.py" --branch="${{ inputs.branch }}" --file="${{ inputs.file }}" --path="${{ inputs.path }}"
+      run: >
+        python "$GITHUB_ACTION_PATH/check_version.py"
+        --branch="${{ inputs.branch }}"
+        --file="${{ inputs.file }}"
+        --path="${{ inputs.path }}"
