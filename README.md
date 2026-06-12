@@ -26,7 +26,7 @@ jobs:
   check_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_version@1.2.0
+      - uses: villoro/vhooks/check_version@1.4.0
         with:
           branch: "main"  # Branch to compare against
           file: "pyproject.toml"  # File to extract the version from
@@ -75,7 +75,7 @@ jobs:
   tag_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/tag_version@1.2.0
+      - uses: villoro/vhooks/tag_version@1.4.0
         with:
           file: "pyproject.toml"  # File containing the version
           path: "project/version"  # Path inside the file
