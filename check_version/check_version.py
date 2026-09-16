@@ -9,6 +9,11 @@ from loguru import logger
 from packaging import version
 
 DEFAULT_FILE = "pyproject.toml"
+NEW_PACKAGE_VERSION = "0.1.0"
+
+
+class BranchFileNotFound(Exception):
+    """Raised when the requested file does not exist on the given branch."""
 
 
 def fetch_file_from_branch(branch, file_path):
@@ -23,8 +28,7 @@ def fetch_file_from_branch(branch, file_path):
             check=True,
         ).stdout
     except subprocess.CalledProcessError:
-        logger.error(f"❌ Could not fetch {file_path} from {branch=}")
-        sys.exit(1)
+        raise BranchFileNotFound(f"Could not fetch {file_path} from {branch=}")
 
 
 def parse_file_content(file_path, content):
@@ -51,6 +55,8 @@ def load_file(file_path, branch=None):
             with open(file_path, "r") as f:
                 return parse_file_content(file_path, f.read())
 
+    except BranchFileNotFound:
+        raise
     except (FileNotFoundError, KeyError):
         logger.error(f"❌ Could not find {file_path} or path is invalid")
         sys.exit(1)
@@ -125,7 +131,19 @@ def validate_versions(version_current, version_main):
 def check_version(branch, file, path):
     """Compares current version with the specified branch version."""
     current_version_str = get_version(file, path)
-    branch_version_str = get_version(file, path, branch)
+
+    try:
+        branch_version_str = get_version(file, path, branch)
+    except BranchFileNotFound:
+        if current_version_str == NEW_PACKAGE_VERSION:
+            logger.success(
+                f"✅ No baseline {file} on {branch=} and current version is "
+                f"{NEW_PACKAGE_VERSION} — treating as a new package."
+            )
+            sys.exit(0)
+
+        logger.error(f"❌ Could not fetch {file} from {branch=}")
+        sys.exit(1)
 
     logger.info(f"🔍 Current branch version: {current_version_str}")
     logger.info(f"🔍 {branch.title()} branch version: {branch_version_str}")
