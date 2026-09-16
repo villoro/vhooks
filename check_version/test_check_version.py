@@ -1,10 +1,8 @@
 import pytest
 
-from check_version import (
-    BranchFileNotFound,
-    BranchPathNotFound,
-    get_version,
-)
+from check_version import BranchFileNotFound
+from check_version import BranchPathNotFound
+from check_version import get_version
 
 
 def test_get_version_local_missing_path_raises_keyerror(tmp_path, monkeypatch):
