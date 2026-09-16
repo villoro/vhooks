@@ -26,7 +26,7 @@ jobs:
   check_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_version@1.5.0
+      - uses: villoro/vhooks/check_version@1.5.1
         with:
           branch: "main"  # Branch to compare against
           file: "pyproject.toml"  # File to extract the version from
@@ -53,7 +53,7 @@ jobs:
 * **Runs only if specified paths change.**
 * **Fails the PR** if the version is missing, unchanged, or skips versions.
 * **Passes** when the version has been correctly incremented.
-* **Passes** if the file does not exist yet on `branch` (e.g. a new package added in this PR) **and** the current version is `0.1.0` — treated as a brand-new package with no baseline to compare against. If the file is missing on `branch` for any other current version, the check still fails.
+* **Passes** if the file does not exist yet on `branch`, or the file exists but `path` is missing in it (e.g. a new package or a new config section added in this PR) **and** the current version is `0.1.0` — treated as a brand-new package with no baseline to compare against. For any other current version, a missing file or missing path on `branch` still fails. A missing `path` in the *local* file always fails, regardless of version.
 
 ## 🚀 Tag Version
 
@@ -76,7 +76,7 @@ jobs:
   tag_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/tag_version@1.5.0
+      - uses: villoro/vhooks/tag_version@1.5.1
         with:
           file: "pyproject.toml"  # File containing the version
           path: "project/version"  # Path inside the file
@@ -124,7 +124,7 @@ jobs:
   check_versions_match:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_versions_match@1.5.0
+      - uses: villoro/vhooks/check_versions_match@1.5.1
         with:
           targets: |
             - file: dbt_project.yml

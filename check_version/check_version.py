@@ -16,6 +16,10 @@ class BranchFileNotFound(Exception):
     """Raised when the requested file does not exist on the given branch."""
 
 
+class BranchPathNotFound(Exception):
+    """Raised when the requested path does not exist in the file on the given branch."""
+
+
 def fetch_file_from_branch(branch, file_path):
     """Fetches file content from a specific Git branch."""
     logger.info(f"Fetching {file_path} from {branch=}")
@@ -72,8 +76,15 @@ def get_version(file_path, version_path, branch=None):
     # Extract version from the nested structure
     keys = version_path.split("/")
     version_value = config
-    for key in keys:
-        version_value = version_value[key]
+    try:
+        for key in keys:
+            version_value = version_value[key]
+    except KeyError:
+        if branch:
+            raise BranchPathNotFound(
+                f"Could not find {version_path=} in {file_path} on {branch=}"
+            )
+        raise
 
     return version_value
 
@@ -143,6 +154,16 @@ def check_version(branch, file, path):
             sys.exit(0)
 
         logger.error(f"❌ Could not fetch {file} from {branch=}")
+        sys.exit(1)
+    except BranchPathNotFound:
+        if current_version_str == NEW_PACKAGE_VERSION:
+            logger.success(
+                f"✅ No baseline {path=} in {file} on {branch=} and current version is "
+                f"{NEW_PACKAGE_VERSION} — treating as a new package."
+            )
+            sys.exit(0)
+
+        logger.error(f"❌ Could not find {path=} in {file} on {branch=}")
         sys.exit(1)
 
     logger.info(f"🔍 Current branch version: {current_version_str}")
