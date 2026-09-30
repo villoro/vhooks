@@ -41,10 +41,19 @@ inputs:
       code:
         - '**'
 
+  setup:
+    description: |
+      Set to 'false' to skip this action's own checkout, fetch of the target branch and
+      dependency install, when the caller already did them once for several steps of the
+      same job (see the README, "Several checks in one job").
+    required: false
+    default: "true"
+
 runs:
   using: composite
   steps:
     - name: Checkout repository
+      if: inputs.setup == 'true'
       uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
@@ -52,6 +61,7 @@ runs:
         fetch-depth: 0
 
     - name: Fetch target branch
+      if: inputs.setup == 'true'
       shell: bash
       run: git fetch origin ${{ inputs.branch }} --depth=1
 
@@ -65,7 +75,7 @@ runs:
         filters: ${{ inputs.filters }}
 
     - name: Install dependencies
-      if: steps.changes.outputs.code == 'true'
+      if: steps.changes.outputs.code == 'true' && inputs.setup == 'true'
       shell: bash
       run: pip install toml loguru packaging click pyyaml
 

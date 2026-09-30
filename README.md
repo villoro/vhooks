@@ -26,7 +26,7 @@ jobs:
   check_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_version@1.5.1
+      - uses: villoro/vhooks/check_version@1.6.0
         with:
           branch: "main"  # Branch to compare against
           file: "pyproject.toml"  # File to extract the version from
@@ -47,6 +47,8 @@ jobs:
 | `file`       | File containing the version (supports `.toml`, `.json`, `.yml`).       | ❌ No     | `pyproject.toml`           |
 | `path`       | Path inside the file to extract the version.                           | ❌ No     | `project/version`          |
 | `filters`    | YAML configuration for `dorny/paths-filter`. Must define a `code` key. | ❌ No     | `code: ['**']`             |
+| `setup` | `false` skips the action's own checkout, target-branch fetch and `pip install` (see [Several checks in one job](#-several-checks-in-one-job)). | ❌ No | `true` |
+| `setup`      | `false` skips the action's own checkout, target-branch fetch and `pip install` (see [Several checks in one job](#-several-checks-in-one-job)). | ❌ No     | `true`            |
 
 ### ✅ Expected Behavior
 
@@ -76,7 +78,7 @@ jobs:
   tag_version:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/tag_version@1.5.1
+      - uses: villoro/vhooks/tag_version@1.6.0
         with:
           file: "pyproject.toml"  # File containing the version
           path: "project/version"  # Path inside the file
@@ -95,6 +97,7 @@ jobs:
 | `path`       | Path inside the file to extract the version.                           | ❌ No     | `project/version` |
 | `filters`    | YAML configuration for `dorny/paths-filter`. Must define a `code` key. | ❌ No     | `code: ['**']`    |
 | `tag-prefix` | Optional prefix to prepend to the tag (e.g. `v` creates `v1.2.3`).     | ❌ No     | *(empty)*         |
+| `setup` | `false` skips the action's own checkout, target-branch fetch and `pip install` (see [Several checks in one job](#-several-checks-in-one-job)). | ❌ No | `true` |
 
 
 ### ✅ Expected Behavior
@@ -124,7 +127,7 @@ jobs:
   check_versions_match:
     runs-on: ubuntu-latest
     steps:
-      - uses: villoro/vhooks/check_versions_match@1.5.1
+      - uses: villoro/vhooks/check_versions_match@1.6.0
         with:
           targets: |
             - file: dbt_project.yml
@@ -148,6 +151,7 @@ jobs:
 | --------- | --------------------------------------------------------------------- | -------- | -------------- |
 | `targets` | YAML list of `{file, path}` entries whose versions must all match.    | ✅ Yes    | —              |
 | `filters` | YAML configuration for `dorny/paths-filter`. Must define a `code` key. | ❌ No     | `code: ['**']` |
+| `setup` | `false` skips the action's own checkout, target-branch fetch and `pip install` (see [Several checks in one job](#-several-checks-in-one-job)). | ❌ No | `true` |
 
 ### 🧭 Path Syntax
 
@@ -164,6 +168,45 @@ Supported formats: `.toml`, `.lock` (TOML), `.json`, `.yml`/`.yaml`.
 * **Runs only if specified paths change.**
 * **Fails the PR** if any file/path is missing or the extracted versions differ.
 * **Passes** when all versions are exactly equal.
+
+## ⚡ Several checks in one job
+
+GitHub bills every job rounded up to a minute, so running many of these actions as one job per package is expensive. Put them all as steps of a single job instead. By default every action does its own `actions/checkout` (with `fetch-depth: 0`), its own fetch of the target branch and its own `pip install`, which adds up. Do them once and pass `setup: "false"`:
+
+```yaml
+jobs:
+  check_versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch main
+        run: git fetch origin main --depth=1
+      - name: Install dependencies
+        run: pip install toml loguru packaging click pyyaml
+
+      - uses: villoro/vhooks/check_version@1.6.0
+        with:
+          setup: "false"
+          file: src/pkg_a/pyproject.toml
+          filters: |
+            code:
+              - 'src/pkg_a/**'
+
+      - uses: villoro/vhooks/check_version@1.6.0
+        if: ${{ !cancelled() }}  # keep going after a failure to report every package
+        with:
+          setup: "false"
+          file: src/pkg_b/pyproject.toml
+          filters: |
+            code:
+              - 'src/pkg_b/**'
+```
+
+Notes:
+
+* `dorny/paths-filter` still runs in every step. On `pull_request` it reads the changed files from the API, so a shallow checkout is enough. On `push` (`tag_version`) it uses git, so check out with `fetch-depth: 0`.
+* `check_version` needs `origin/<branch>` locally (the `Fetch main` step above); `check_versions_match` and `tag_version` don't.
+* The default (`setup: "true"`) is unchanged, so existing workflows keep working.
 
 ## 🔗 Related Links
 
