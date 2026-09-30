@@ -207,6 +207,7 @@ Notes:
 * `dorny/paths-filter` still runs in every step. On `pull_request` it reads the changed files from the API, so a shallow checkout is enough. On `push` (`tag_version`) it uses git, so check out with `fetch-depth: 0`.
 * `check_version` needs `origin/<branch>` locally (the `Fetch main` step above); `check_versions_match` and `tag_version` don't.
 * The default (`setup: "true"`) is unchanged, so existing workflows keep working.
+* Don't let the first action of the job do the setup for the others (leaving it on `setup: "true"`). Each action only runs its `pip install` when its own `filters` matched, so if the first package has no changes nothing gets installed and every later step fails. It would also depend on the order of the steps. Do the setup in explicit steps, as above.
 
 ## 🔗 Related Links
 
